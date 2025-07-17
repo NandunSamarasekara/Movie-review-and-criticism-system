@@ -2,7 +2,10 @@ package com.moviereviewandcriticismsystem.movie_review_and_criticism_system.cont
 
 import com.moviereviewandcriticismsystem.movie_review_and_criticism_system.Review;
 import com.moviereviewandcriticismsystem.movie_review_and_criticism_system.repository.ReviewRepository;
+import com.moviereviewandcriticismsystem.movie_review_and_criticism_system.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,6 +15,8 @@ import java.util.List;
 public class ReviewController {
     @Autowired
     private ReviewRepository reviewRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     @GetMapping
     public List<Review> getAllReviews() {
@@ -24,16 +29,24 @@ public class ReviewController {
     }
 
     @PostMapping
-    public Review addReview(@RequestBody Review review) {
-        return reviewRepository.save(review);
+    public ResponseEntity<Review> addReview(@RequestBody Review review) {
+        if (review.getUser() == null || review.getUser().getId() == null ||
+                userRepository.findById(review.getUser().getId()).isEmpty()) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        if (review.getMovie() == null || review.getMovie().getId() == null ||
+                review.getMovie().getId() <= 0) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+        return new ResponseEntity<>(reviewRepository.save(review), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     public Review updateReview(@PathVariable Long id, @RequestBody Review review) {
         Review existingReview = reviewRepository.findById(id).orElse(null);
         if (existingReview != null) {
-            existingReview.setMovieId(review.getMovieId());
-            existingReview.setReviewerName(review.getReviewerName());
+            existingReview.setMovie(review.getMovie());
+            existingReview.setUser(review.getUser());
             existingReview.setComment(review.getComment());
             existingReview.setRating(review.getRating());
             return reviewRepository.save(existingReview);
